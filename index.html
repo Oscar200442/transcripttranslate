@@ -18,6 +18,7 @@
         <textarea id="youtubeLinks" placeholder="e.g., https://www.youtube.com/watch?v=VIDEO_ID1,https://www.youtube.com/watch?v=VIDEO_ID2" rows="4"></textarea>
         <button onclick="downloadTranscripts()">Get Transcripts</button>
         <div id="error" class="error-message" style="display: none;"></div>
+        <div id="loading" class="loading-message" style="display: none;">Fetching transcripts, please wait...</div>
       </div>
     </div>
     <div class="card">
@@ -30,6 +31,7 @@
       </div>
     </div>
   </div>
+  <script src="https://apis.google.com/js/api.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
