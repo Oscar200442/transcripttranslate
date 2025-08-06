@@ -1,6 +1,6 @@
-// Replace with your OAuth 2.0 Client ID from Google Cloud Console
-const CLIENT_ID = '648045152886-nj5ppll4u2k0pp0ql7lm4904mg1bl4v4.apps.googleusercontent.com'; // Update this
-const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly';
+// Using your specific OAuth 2.0 Client ID
+const CLIENT_ID = '648045152886-nj5ppll4u2k0pp0ql7lm4904mg1bl4v4.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly'; // Consider changing to 'https://www.googleapis.com/auth/youtube' if needed
 
 let accessToken = null;
 
@@ -60,19 +60,34 @@ async function downloadTranscripts() {
       });
       const captionsData = await captionsResponse.json();
 
-      if (!captionsData.items || captionsData.items.length === 0) {
-        allTranscripts += `No captions available for video: ${link}\n\n`;
+      if (captionsResponse.status !== 200 || !captionsData.items || captionsData.items.length === 0) {
+        allTranscripts += `No captions available for ${link}. Ensure the video has captions enabled.\n\n`;
         continue;
       }
 
       // Get the first available caption track
-      const captionId = captionsData.items[0].id;
-      const captionResponse = await fetch(`https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt`, {
+      const caption = captionsData.items[0];
+      const captionId = caption.id;
+      const language = caption.snippet.language;
+      const name = caption.snippet.name || 'Unnamed';
+
+      // Fetch the caption content with detailed error handling
+      const captionContentResponse = await fetch(`https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt`, {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
-      const captionText = await captionResponse.text();
 
-      allTranscripts += `Transcript for ${link}:\n${captionText}\n\n`;
+      let captionText = '';
+      if (captionContentResponse.status === 200) {
+        captionText = await captionContentResponse.text();
+        if (!captionText.trim()) {
+          captionText = 'No transcript content retrieved. The caption may be empty or restricted.';
+        }
+      } else {
+        const errorData = await captionContentResponse.json();
+        captionText = `Error fetching caption content: ${errorData.error?.message || 'Unknown error, status ' + captionContentResponse.status}`;
+      }
+
+      allTranscripts += `Transcript for ${link}:\nLanguage: ${language}, Name: ${name}\n${captionText}\n\n`;
     }
 
     // Display transcripts
