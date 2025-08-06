@@ -38,13 +38,26 @@ async function downloadTranscripts() {
   }
 
   try {
-    // Load Google API Client
+    // Wait for gapi to be available
     await new Promise((resolve, reject) => {
       if (typeof gapi === 'undefined') {
         reject(new Error('Google API Client Library failed to load. Check network or script inclusion.'));
       }
+      // Poll for gapi availability
+      const maxAttempts = 10;
+      let attempts = 0;
+      const checkGapi = () => {
+        if (gapi.client) {
+          resolve();
+        } else if (attempts < maxAttempts) {
+          attempts++;
+          setTimeout(checkGapi, 500); // Wait 500ms before retrying
+        } else {
+          reject(new Error('Google API Client Library took too long to load.'));
+        }
+      };
       gapi.load('client', {
-        callback: resolve,
+        callback: checkGapi,
         onerror: () => reject(new Error('Failed to load gapi.client')),
       });
     });
@@ -58,7 +71,7 @@ async function downloadTranscripts() {
     await gapi.client.load('youtube', 'v3');
 
     // Verify YouTube API is loaded
-    if (!gapi.client.youtube) {
+    if (!gapi.client.youtube || !gapi.client.youtube.captions) {
       throw new Error('Failed to load YouTube API v3. Ensure API key is valid and YouTube Data API v3 is enabled.');
     }
 
