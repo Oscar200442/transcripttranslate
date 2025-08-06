@@ -1,0 +1,105 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background-color: #ffffff; /* Hvid baggrund */
+}
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.card {
+  background-color: #1a1a1a; /* Mørk baggrund for kontrast */
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.card-header {
+  padding: 20px;
+  text-align: center;
+}
+h1 {
+  font-size: 36px; /* Stor tekst */
+  color: #ffffff; /* Hvid tekst */
+  margin: 0;
+}
+p {
+  font-size: 20px;
+  color: #ffffff;
+  margin: 5px 0;
+}
+.card-content {
+  padding: 20px;
+}
+label {
+  font-size: 18px;
+  color: #ffffff;
+  font-weight: bold;
+  display: block;
+  margin-bottom: 10px;
+}
+textarea {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  resize: vertical;
+  background-color: #ffffff;
+}
+button {
+  padding: 12px 24px;
+  font-size: 18px;
+  background-color: #007bff;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+  width: 100%;
+}
+button:hover {
+  background-color: #0056b3;
+}
+.error-message {
+  background-color: #ffe6e6;
+  border: 1px solid #ff9999;
+  color: #cc0000;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 10px;
+}
+h2 {
+  font-size: 28px;
+  color: #ffffff;
+  margin: 0;
+}
+#transcriptOutput {
+  min-height: 200px;
+}
+#downloadLink {
+  display: block;
+  margin-top: 10px;
+  font-size: 18px;
+  color: #007bff;
+  text-decoration: none;
+}
+#downloadLink:hover {
+  text-decoration: underline;
+}
+@media (max-width: 600px) {
+  .container {
+    padding: 10px;
+  }
+  h1 {
+    font-size: 28px;
+  }
+  p {
+    font-size: 16px;
+  }
+  h2 {
+    font-size: 24px;
+  }
+}
