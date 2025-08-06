@@ -2,7 +2,7 @@ body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 20px;
-  background-color: #ffffff; /* Hvid baggrund */
+  background-color: #ffffff; /* White background */
 }
 .container {
   max-width: 800px;
@@ -12,7 +12,7 @@ body {
   gap: 20px;
 }
 .card {
-  background-color: #FF8C00; /* Mørk baggrund for kontrast */
+  background-color: #FF8C00; /* Orange background for contrast */
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -21,8 +21,8 @@ body {
   text-align: center;
 }
 h1 {
-  font-size: 36px; /* Stor tekst */
-  color: #ffffff; /* Hvid tekst */
+  font-size: 36px; /* Large text */
+  color: #ffffff; /* White text */
   margin: 0;
 }
 p {
@@ -41,4 +41,43 @@ label {
   margin-bottom: 10px;
 }
 textarea {
-  width
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+  resize: vertical;
+}
+button {
+  background-color: #007bff;
+  color: #ffffff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+button:hover {
+  background-color: #0056b3;
+}
+.error-message {
+  color: #ff0000;
+  font-size: 14px;
+  margin-top: 10px;
+}
+.loading-message {
+  color: #ffffff;
+  font-size: 14px;
+  margin-top: 10px;
+}
+#downloadLink {
+  display: inline-block;
+  margin-top: 10px;
+  color: #007bff;
+  text-decoration: none;
+  font-size: 16px;
+}
+#downloadLink:hover {
+  text-decoration: underline;
+}
