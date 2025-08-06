@@ -1,58 +1,38 @@
-let transcripts = [];
-
-async function fetchTranscripts() {
-  const videoUrls = document.getElementById('videoUrls').value.split('\n').map(url => url.trim()).filter(url => url);
+async function fetchTranscript() {
+  const videoUrl = document.getElementById('videoUrl').value;
+  const videoId = extractVideoId(videoUrl);
   const errorDiv = document.getElementById('error');
-  const transcriptSection = document.getElementById('transcriptSection');
-  const loadingDiv = document.getElementById('loading');
-  const transcriptsContainer = document.getElementById('transcriptsContainer');
+  const transcriptOutput = document.getElementById('transcriptOutput');
+  const transcriptText = document.getElementById('transcriptText');
 
-  if (videoUrls.length === 0) {
-    errorDiv.textContent = 'Please enter at least one YouTube URL.';
+  if (!videoId) {
+    errorDiv.textContent = 'Invalid YouTube URL. Please try again.';
     errorDiv.classList.remove('hidden');
+    transcriptOutput.classList.add('hidden');
     return;
   }
 
   errorDiv.classList.add('hidden');
-  transcriptSection.classList.add('hidden');
-  loadingDiv.classList.remove('hidden');
-  transcriptsContainer.innerHTML = '';
+  transcriptText.textContent = 'Fetching transcript...';
+  transcriptOutput.classList.remove('hidden');
 
   try {
-    transcripts = [];
-    for (const url of videoUrls) {
-      const videoId = extractVideoId(url);
-      if (!videoId) {
-        transcripts.push({ videoId: url, text: 'Invalid URL', error: true });
-        continue;
-      }
-      // Mock transcript fetching - replace with backend call (e.g., fetch(`/api/transcript?videoId=${videoId}`))
-      const mockTranscript = `00:00:00,000 --> 00:00:05,000\nVideo ${videoId} Transcript\n00:00:05,001 --> 00:00:10,000\nSample content.`;
-      transcripts.push({ videoId, text: mockTranscript });
+    // Replace 'YOUR_API_KEY' with your actual YouTube Data API key
+    const response = await fetch(`https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${videoId}&key=YOUR_API_KEY`);
+    const data = await response.json();
+
+    if (!data.items || data.items.length === 0) {
+      transcriptText.textContent = 'No transcript available for this video.';
+      return;
     }
 
-    if (transcripts.length > 0) {
-      transcripts.forEach(({ videoId, text, error }) => {
-        const div = document.createElement('div');
-        div.className = 'border p-2 rounded-md';
-        div.innerHTML = `
-          <p class="font-medium">Video ID: ${videoId}</p>
-          <button onclick="viewTranscript('${videoId}')" class="mt-2 bg-blue-500 text-white p-1 rounded-md hover:bg-blue-600">View</button>
-          <button onclick="downloadTranscript('${videoId}')" class="mt-2 ml-2 bg-green-500 text-white p-1 rounded-md hover:bg-green-600">Download</button>
-          ${error ? '<p class="text-red-500">Error: Invalid URL</p>' : ''}
-        `;
-        transcriptsContainer.appendChild(div);
-      });
-      transcriptSection.classList.remove('hidden');
-    } else {
-      errorDiv.textContent = 'No valid transcripts retrieved.';
-      errorDiv.classList.remove('hidden');
-    }
+    const captionId = data.items[0].id;
+    const captionResponse = await fetch(`https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt&key=YOUR_API_KEY`);
+    const captionData = await captionResponse.text();
+    transcriptText.textContent = captionData;
   } catch (error) {
-    errorDiv.textContent = 'Error processing transcripts. Check the URLs.';
-    errorDiv.classList.remove('hidden');
-  } finally {
-    loadingDiv.classList.add('hidden');
+    transcriptText.textContent = 'Error fetching transcript. Ensure the video has captions and your API key is valid.';
+    console.error(error);
   }
 }
 
@@ -62,62 +42,17 @@ function extractVideoId(url) {
   return match ? match[1] : null;
 }
 
-function viewTranscript(videoId) {
-  const transcript = transcripts.find(t => t.videoId === videoId);
-  if (transcript) alert(transcript.text);
-}
-
-function downloadTranscript(videoId) {
-  const transcript = transcripts.find(t => t.videoId === videoId);
-  if (transcript && !transcript.error) {
-    const blob = new Blob([transcript.text], { type: 'text/plain' });
+function downloadTranscript() {
+  const transcriptText = document.getElementById('transcriptText').textContent;
+  if (transcriptText && transcriptText !== 'Fetching transcript...' && transcriptText !== 'No transcript available for this video.') {
+    const blob = new Blob([transcriptText], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `transcript_${videoId}.txt`;
+    a.download = 'transcript.txt';
     a.click();
     URL.revokeObjectURL(url);
   } else {
-    alert('No valid transcript available to download.');
-  }
-}
-
-function downloadAllTranscripts() {
-  const validTranscripts = transcripts.filter(t => !t.error);
-  if (validTranscripts.length > 0) {
-    const combinedText = validTranscripts.map(t => `Transcript for Video ID: ${t.videoId}\n${t.text}\n---`).join('\n');
-    const blob = new Blob([combinedText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'all_transcripts.txt';
-    a.click();
-    URL.revokeObjectURL(url);
-  } else {
-    alert('No valid transcripts available to download.');
-  }
-}
-
-async function translateText() {
-  const translateText = document.getElementById('translateText').value;
-  const targetLanguage = document.getElementById('targetLanguage').value;
-  const translatedText = document.getElementById('translatedText');
-  const deeplSection = document.getElementById('deeplTranslator');
-
-  if (!translateText) {
-    translatedText.textContent = 'Please enter text to translate.';
-    return;
-  }
-
-  deeplSection.classList.remove('hidden');
-  translatedText.textContent = 'Translating...';
-
-  try {
-    // Mock translation - replace with DeepL API call (e.g., fetch('https://api.deepl.com/v2/translate', { ... }))
-    const mockTranslation = `${translateText} (Translated to ${targetLanguage})`;
-    translatedText.textContent = mockTranslation;
-  } catch (error) {
-    translatedText.textContent = 'Error during translation. Check your input.';
-    console.error(error);
+    alert('No transcript available to download.');
   }
 }
