@@ -1,20 +1,3 @@
-// Using your specific OAuth 2.0 Client ID
-const CLIENT_ID = '648045152886-nj5ppll4u2k0pp0ql7lm4904mg1bl4v4.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/youtube.readonly'; // Consider changing to 'https://www.googleapis.com/auth/youtube' if needed
-
-let accessToken = null;
-
-function handleAuthClick() {
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent('https://oscar200442.github.io/transcripttranslate/')}&response_type=token&scope=${encodeURIComponent(SCOPES)}&state=state_parameter_passthrough_value`;
-  window.location.href = authUrl;
-}
-
-function getTokenFromUrl() {
-  const hash = window.location.hash.substring(1);
-  const params = new URLSearchParams(hash);
-  return params.get('access_token');
-}
-
 async function downloadTranscripts() {
   const youtubeLinks = document.getElementById('youtubeLinks').value.split(',').map(url => url.trim());
   const transcriptOutput = document.getElementById('transcriptOutput');
@@ -22,7 +5,7 @@ async function downloadTranscripts() {
   const errorDiv = document.getElementById('error');
 
   // Reset outputs
-  transcriptOutput.value = 'Authenticating and fetching transcripts...';
+  transcriptOutput.value = 'Fetching transcripts...';
   downloadLink.style.display = 'none';
   errorDiv.style.display = 'none';
   errorDiv.textContent = '';
@@ -34,63 +17,19 @@ async function downloadTranscripts() {
     return;
   }
 
-  // Check or get access token
-  if (!accessToken) {
-    accessToken = getTokenFromUrl();
-    if (!accessToken) {
-      handleAuthClick();
-      return;
-    }
-  }
-
   try {
+    const response = await fetch('https://your-transcripttranslate-server.vercel.app/transcripts', { // Replace with your Vercel URL
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ urls: youtubeLinks })
+    });
+    const transcripts = await response.json();
     let allTranscripts = '';
 
-    for (const link of youtubeLinks) {
-      const videoIdMatch = link.match(/(?:v=)([^&]+)/);
-      if (!videoIdMatch) {
-        allTranscripts += `Invalid URL: ${link}\n\n`;
-        continue;
-      }
-      const videoId = videoIdMatch[1];
-
-      // Fetch available caption tracks
-      const captionsResponse = await fetch(`https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${videoId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      const captionsData = await captionsResponse.json();
-
-      if (captionsResponse.status !== 200 || !captionsData.items || captionsData.items.length === 0) {
-        allTranscripts += `No captions available for ${link}. Ensure the video has captions enabled.\n\n`;
-        continue;
-      }
-
-      // Get the first available caption track
-      const caption = captionsData.items[0];
-      const captionId = caption.id;
-      const language = caption.snippet.language;
-      const name = caption.snippet.name || 'Unnamed';
-
-      // Fetch the caption content with detailed error handling
-      const captionContentResponse = await fetch(`https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt`, {
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
-
-      let captionText = '';
-      if (captionContentResponse.status === 200) {
-        captionText = await captionContentResponse.text();
-        if (!captionText.trim()) {
-          captionText = 'No transcript content retrieved. The caption may be empty or restricted.';
-        }
-      } else {
-        const errorData = await captionContentResponse.json();
-        captionText = `Error fetching caption content: ${errorData.error?.message || 'Unknown error, status ' + captionContentResponse.status}`;
-      }
-
-      allTranscripts += `Transcript for ${link}:\nLanguage: ${language}, Name: ${name}\n${captionText}\n\n`;
+    for (const [url, transcript] of Object.entries(transcripts)) {
+      allTranscripts += `Transcript for ${url}:\n${transcript}\n\n`;
     }
 
-    // Display transcripts
     transcriptOutput.value = allTranscripts;
 
     // Create downloadable file
@@ -106,11 +45,3 @@ async function downloadTranscripts() {
     console.error('Detailed error:', error);
   }
 }
-
-// Check for token on page load
-window.onload = () => {
-  accessToken = getTokenFromUrl();
-  if (accessToken) {
-    window.history.pushState({}, document.title, window.location.pathname); // Clear hash
-  }
-};
