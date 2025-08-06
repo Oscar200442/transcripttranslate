@@ -30,7 +30,7 @@ async function downloadTranscripts() {
       }
       const videoId = videoIdMatch[1];
 
-      // Fetch captions
+      // Fetch captions list
       const captionsResponse = await fetch(`https://www.googleapis.com/youtube/v3/captions?part=snippet&videoId=${videoId}&key=${apiKey}`);
       const captionsData = await captionsResponse.json();
 
@@ -39,18 +39,19 @@ async function downloadTranscripts() {
         continue;
       }
 
-      // Get the first available caption track
-      const captionId = captionsData.items[0].id;
-      const captionResponse = await fetch(`https://www.googleapis.com/youtube/v3/captions/${captionId}?tfmt=srt&key=${apiKey}`);
-      const captionText = await captionResponse.text();
-
-      allTranscripts += `Transcript for ${link}:\n${captionText}\n\n`;
+      // Note: Direct SRT download requires OAuth, so we skip that
+      allTranscripts += `Transcript for ${link}:\n`;
+      captionsData.items.forEach(item => {
+        allTranscripts += `  Language: ${item.snippet.language}, Name: ${item.snippet.name}\n`;
+        // If auto-generated captions are available, we could fetch metadata, but content requires OAuth
+      });
+      allTranscripts += '\n';
     }
 
-    // Display transcripts
-    transcriptOutput.value = allTranscripts;
+    // Display transcripts (metadata only, as content download is restricted)
+    transcriptOutput.value = allTranscripts || 'No downloadable transcript content available due to API restrictions. Metadata shown instead.';
 
-    // Create downloadable file
+    // Create downloadable file with metadata
     const blob = new Blob([allTranscripts], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     downloadLink.href = url;
