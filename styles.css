@@ -1,15 +1,6 @@
 body {
-  background-color: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-}
-
-#transcriptsContainer div {
-  transition: all 0.3s ease;
-}
-
-#transcriptsContainer div:hover {
-  background-color: #e5e7eb;
+  font-family: system-ui;
+  background: #f04d03;
+  color: white;
+  text-align: center;
 }
