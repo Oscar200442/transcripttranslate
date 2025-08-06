@@ -1,79 +1,257 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { YoutubeTranscript } from "youtube-transcript";
 
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
+const languages = [
+  { code: "es", name: "Spanish" },
+  { code: "fr", name: "French" },
+  { code: "de", name: "German" },
+  { code: "it", name: "Italian" },
+  { code: "pt", name: "Portuguese" },
+  { code: "ru", name: "Russian" },
+  { code: "ja", name: "Japanese" },
+  { code: "ko", name: "Korean" },
+  { code: "zh", name: "Chinese" },
+  { code: "ar", name: "Arabic" },
+  { code: "hi", name: "Hindi" },
+  { code: "nl", name: "Dutch" },
+  { code: "sv", name: "Swedish" },
+  { code: "no", name: "Norwegian" },
+  { code: "da", name: "Danish" },
+  { code: "fi", name: "Finnish" },
+  { code: "pl", name: "Polish" },
+  { code: "tr", name: "Turkish" },
+  { code: "th", name: "Thai" },
+  { code: "vi", name: "Vietnamese" },
+];
 
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
+function Home() {
+  const [videoUrl, setVideoUrl] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [originalTranscript, setOriginalTranscript] = useState("");
+  const [translatedText, setTranslatedText] = useState("");
+  const [summary, setSummary] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>YouTube Transcript Downloader with Translation</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
-  <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-2xl">
-    <h1 class="text-2xl font-bold mb-4 text-center">YouTube Transcript Downloader with Translation</h1>
-    <div class="mb-4">
-      <label for="videoUrls" class="block text-sm font-medium text-gray-700">Enter YouTube Video URLs (one per line)</label>
-      <textarea id="videoUrls" rows="4" placeholder="https://www.youtube.com/watch?v=...\nhttps://www.youtube.com/watch?v=..." class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+  const extractVideoId = (url: string) => {
+    const regex =
+      /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/).*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
+
+  const fetchTranscript = async () => {
+    if (!videoUrl) {
+      setError("Please enter a YouTube video URL");
+      return;
+    }
+
+    const videoId = extractVideoId(videoUrl);
+    if (!videoId) {
+      setError("Invalid YouTube URL");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+      const fullTranscript = transcript.map((item) => item.text).join(" ");
+      setOriginalTranscript(fullTranscript);
+    } catch (err) {
+      setError(
+        "Failed to fetch transcript. Make sure the video has captions available.",
+      );
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const translateText = async () => {
+    if (!originalTranscript || !selectedLanguage) {
+      setError("Please fetch transcript and select a language first");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // Using Google Translate API (free tier)
+      const response = await fetch(
+        `https://api.mymemory.translated.net/get?q=${encodeURIComponent(originalTranscript)}&langpair=en|${selectedLanguage}`,
+      );
+      const data = await response.json();
+
+      if (data.responseStatus === 200) {
+        setTranslatedText(data.responseData.translatedText);
+      } else {
+        setError("Translation failed. Please try again.");
+      }
+    } catch (err) {
+      setError("Translation service unavailable. Please try again later.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const summarizeText = async () => {
+    const textToSummarize = translatedText || originalTranscript;
+    if (!textToSummarize) {
+      setError("No text available to summarize");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      // Simple extractive summarization - taking first few sentences
+      const sentences = textToSummarize
+        .split(/[.!?]+/)
+        .filter((s) => s.trim().length > 0);
+      const summaryLength = Math.min(3, Math.ceil(sentences.length * 0.3));
+      const summarizedText = sentences.slice(0, summaryLength).join(". ") + ".";
+      setSummary(summarizedText);
+    } catch (err) {
+      setError("Failed to generate summary");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-6xl mx-auto space-y-6">
+        <Card className="bg-white">
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center">
+              YouTube Transcript Translator
+            </CardTitle>
+            <CardDescription className="text-center">
+              Extract, translate, and summarize YouTube video transcripts
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter YouTube video URL..."
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                className="flex-1"
+              />
+              <Button onClick={fetchTranscript} disabled={loading}>
+                {loading ? "Loading..." : "Get Transcript"}
+              </Button>
+            </div>
+
+            <div className="flex gap-2">
+              <Select
+                value={selectedLanguage}
+                onValueChange={setSelectedLanguage}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select target language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={translateText}
+                disabled={loading || !originalTranscript}
+              >
+                {loading ? "Translating..." : "Translate"}
+              </Button>
+              <Button
+                onClick={summarizeText}
+                disabled={loading || (!originalTranscript && !translatedText)}
+              >
+                {loading ? "Summarizing..." : "Summarize"}
+              </Button>
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                {error}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle>Original Transcript</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={originalTranscript}
+                readOnly
+                placeholder="Original transcript will appear here..."
+                className="min-h-[300px] resize-none"
+              />
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle>Translated Text</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={translatedText}
+                readOnly
+                placeholder="Translated text will appear here..."
+                className="min-h-[300px] resize-none"
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {summary && (
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle>Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                value={summary}
+                readOnly
+                placeholder="Summary will appear here..."
+                className="min-h-[150px] resize-none"
+              />
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
-    <button onclick="fetchTranscripts()" class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Process Transcripts</button>
-    <div id="transcriptSection" class="mt-4 p-4 bg-gray-50 rounded-md hidden">
-      <h2 class="text-lg font-semibold mb-2">Transcripts</h2>
-      <div id="transcriptsContainer" class="space-y-4"></div>
-      <button onclick="downloadAllTranscripts()" class="mt-4 bg-green-500 text-white p-2 rounded-md hover:bg-green-600">Download All</button>
-    </div>
-    <p id="error" class="mt-4 text-red-500 hidden"></p>
-    <p id="loading" class="mt-4 text-gray-500 hidden">Processing...</p>
-    <div id="deeplTranslator" class="mt-6 p-4 bg-gray-50 rounded-md hidden">
-      <h2 class="text-lg font-semibold mb-2">DeepL Translator</h2>
-      <label for="translateText" class="block text-sm font-medium text-gray-700">Enter text to translate</label>
-      <textarea id="translateText" rows="4" class="mt-1 p-2 w-full border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-      <select id="targetLanguage" class="mt-2 p-2 border rounded-md w-full">
-        <option value="EN">English</option>
-        <option value="DE">German</option>
-        <option value="FR">French</option>
-        <option value="ES">Spanish</option>
-      </select>
-      <button onclick="translateText()" class="mt-2 bg-purple-500 text-white p-2 rounded-md hover:bg-purple-600">Translate</button>
-      <p id="translatedText" class="mt-2 text-sm text-gray-800"></p>
-    </div>
-  </div>
-  <script src="script.js"></script>
-</body>
-</html>
+  );
+}
+
+export default Home;
