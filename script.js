@@ -1,5 +1,4 @@
 const API_KEY = 'AIzaSyB6MLqwIpK6ni8UETo6f3-oz8CrMNYLWJk';
-const CLIENT_ID = '648045152886-nj5ppll4u2k0pp0ql7lm4904mg1bl4v4.apps.googleusercontent.com';
 
 async function downloadTranscripts() {
   const youtubeLinks = document.getElementById('youtubeLinks').value.split(',').map(url => url.trim());
@@ -41,21 +40,27 @@ async function downloadTranscripts() {
   try {
     // Load Google API Client
     await new Promise((resolve, reject) => {
-      gapi.load('client', { callback: resolve, onerror: reject });
+      if (typeof gapi === 'undefined') {
+        reject(new Error('Google API Client Library failed to load. Check network or script inclusion.'));
+      }
+      gapi.load('client', {
+        callback: resolve,
+        onerror: () => reject(new Error('Failed to load gapi.client')),
+      });
     });
 
-    // Initialize YouTube API client
+    // Initialize gapi client
     await gapi.client.init({
       apiKey: API_KEY,
-      // Uncomment the following for private videos (requires OAuth setup)
-      // clientId: CLIENT_ID,
-      // scope: 'https://www.googleapis.com/auth/youtube.force-ssl',
     });
 
-    // Uncomment for OAuth (requires user consent for private videos)
-    // if (!gapi.auth2.getAuthInstance()?.isSignedIn.get()) {
-    //   await gapi.auth2.getAuthInstance().signIn();
-    // }
+    // Load YouTube API v3
+    await gapi.client.load('youtube', 'v3');
+
+    // Verify YouTube API is loaded
+    if (!gapi.client.youtube) {
+      throw new Error('Failed to load YouTube API v3. Ensure API key is valid and YouTube Data API v3 is enabled.');
+    }
 
     const transcripts = {};
     for (const url of youtubeLinks) {
@@ -74,7 +79,7 @@ async function downloadTranscripts() {
 
         const captionItems = captionResponse.result.items;
         if (!captionItems || captionItems.length === 0) {
-          transcripts[url] = 'No captions available';
+          transcripts[url] = 'No captions available for this video.';
           continue;
         }
 
@@ -88,9 +93,10 @@ async function downloadTranscripts() {
           tfmt: 'srt',
         });
 
-        transcripts[url] = downloadResponse.result;
+        transcripts[url] = downloadResponse.result || 'No transcript content retrieved.';
       } catch (error) {
-        transcripts[url] = `Error: ${error.result?.error?.message || error.message}`;
+        const errorMessage = error.result?.error?.message || error.message || 'Unknown error occurred.';
+        transcripts[url] = `Error: ${errorMessage}`;
       }
     }
 
